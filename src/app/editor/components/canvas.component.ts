@@ -35,42 +35,72 @@ import { LayoutNode } from '../../domain/module-spec';
         class="node rounded-2xl border border-white/10 bg-white/5 p-3 mb-3
            hover:bg-white/10 transition cursor-pointer"
         [class.border-cyan-300]="s.selectedNodeId() === node.id"
-        (click)="onSelect(node, $event)"
       >
         <!-- Header del nodo -->
-        <div>
-          <div class="text-[11px] text-neutral-400 uppercase tracking-wider">
-            {{ node.kind }}
+        <div class="flex items-center justify-between">
+          <div>
+            <div class="text-[11px] text-neutral-400 uppercase tracking-wider">
+              {{ node.kind }}
+            </div>
+            <div class="text-sm font-semibold">
+              {{ node.title || node.id }}
+            </div>
           </div>
-          <div class="text-sm font-semibold">
-            {{ node.title || node.id }}
+
+          <!-- Indicador visual del tipo -->
+          <div
+            class="text-[10px] px-2 py-0.5 rounded-full border border-white/10 text-neutral-400"
+          >
+            {{ node.kind }}
           </div>
         </div>
 
         <!-- Body -->
         <div class="mt-3">
           <ng-container [ngSwitch]="node.kind">
-            <!-- SLOT -->
-            <div *ngSwitchCase="'slot'" class="text-sm">
-              <div class="flex items-center gap-2 text-xs text-neutral-400">
-                <span>bind</span>
+            <!-- ================= SLOT ================= -->
+            <div
+              *ngSwitchCase="'slot'"
+              class="rounded-xl border border-dashed border-cyan-400/40
+                 bg-neutral-950/40 p-3"
+              (click)="onSelect(node); $event.stopPropagation()"
+            >
+              <div class="flex items-center justify-between mb-2">
+                <div class="text-xs uppercase tracking-wider text-cyan-400">
+                  Slot
+                </div>
+
+                <!-- Identificador visual del slot -->
+                <div class="text-[10px] font-mono text-neutral-400">
+                  {{ node.id.slice(0, 6) }}
+                </div>
+              </div>
+
+              <div class="text-xs text-neutral-400 mb-1">
+                bind →
                 <span class="font-mono text-neutral-200">
-                  {{ node.bindFieldName }}
+                  {{ getFieldName(node.bindFieldId) }}
                 </span>
               </div>
 
               <div
-                class="mt-2 rounded-2xl border border-white/10 bg-neutral-950/50 p-3"
+                class="mt-2 rounded-2xl border border-white/10 bg-neutral-950/60 p-3"
               >
-                <div class="text-xs text-neutral-500 mb-1">preview value</div>
+                <div class="text-[11px] text-neutral-500 mb-1">
+                  preview value
+                </div>
                 <div class="text-sm">
-                  {{ resolveSlotPreview(node.bindFieldName) }}
+                  {{ resolveSlotPreview(node.bindFieldId) }}
                 </div>
               </div>
             </div>
 
-            <!-- STACK / SECTION -->
-            <div *ngSwitchDefault class="space-y-2">
+            <!-- ============ STACK / SECTION ============ -->
+            <div
+              *ngSwitchDefault
+              class="space-y-2"
+              (click)="onSelect(node); $event.stopPropagation()"
+            >
               <ng-container *ngFor="let c of node.children ?? []">
                 <ng-container
                   *ngTemplateOutlet="nodeTpl; context: { node: c }"
@@ -86,10 +116,14 @@ import { LayoutNode } from '../../domain/module-spec';
 export class CanvasComponent {
   constructor(public s: EditorStateService) {}
 
-  resolveSlotPreview(fieldName?: string): string {
-    if (!fieldName) return '(unbound slot)';
-    const field = this.s.spec().fields.find((f) => f.name === fieldName);
-    if (!field) return '(unknown field)';
+  private getFieldById(fieldId?: string) {
+    if (!fieldId) return null;
+    return this.s.spec().fields.find((f) => f.id === fieldId) ?? null;
+  }
+
+  resolveSlotPreview(bindFieldId?: string) {
+    const field = this.getFieldById(bindFieldId);
+    if (!field) return '(unbound)';
 
     switch (field.type) {
       case 'text':
@@ -103,9 +137,12 @@ export class CanvasComponent {
     }
   }
 
-  onSelect(node: LayoutNode, ev: MouseEvent) {
-    ev.stopPropagation();
-    console.log('SELECT', node.id);
+  public getFieldName(fieldId?: string) {
+    return this.getFieldById(fieldId)?.name ?? '(unbound)';
+  }
+
+  onSelect(node: LayoutNode) {
+    console.log('SELECT NODE', node.id, node.kind);
     this.s.selectNode(node.id);
   }
 }

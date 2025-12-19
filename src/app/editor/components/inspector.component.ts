@@ -12,12 +12,13 @@ import { UiSelectComponent } from '../../ui/ui-select/ui-select.component';
   selector: 'app-inspector',
   template: `
     <div class="p-4 space-y-4">
+      <!-- Header -->
       <div>
         <div class="text-sm font-semibold">Inspector</div>
-        <div class="text-xs text-neutral-400">Edit module + selected field</div>
+        <div class="text-xs text-neutral-400">Edit module + selection</div>
       </div>
 
-      <!-- Module -->
+      <!-- ================= MODULE ================= -->
       <div class="rounded-3xl border border-white/10 bg-white/5 p-4 space-y-3">
         <div class="text-xs text-neutral-400">Module</div>
 
@@ -36,159 +37,165 @@ import { UiSelectComponent } from '../../ui/ui-select/ui-select.component';
         />
       </div>
 
-      <!-- Content types -->
-      <div class="mt-4">
+      <!-- ================= SLOT MODE ================= -->
+      <ng-container *ngIf="selectedNode() as node">
+        <ng-container *ngIf="node.kind === 'slot'">
+          <div
+            class="rounded-3xl border border-white/10 bg-white/5 p-4 space-y-3"
+          >
+            <div class="text-xs text-neutral-400">Selected slot</div>
+
+            <div class="text-sm font-semibold">Slot binding</div>
+
+            <ui-select
+              [options]="slotFieldOptions()"
+              [ngModel]="node.bindFieldId ?? null"
+              (ngModelChange)="onBindSlot(node.id, $event)"
+            />
+          </div>
+        </ng-container>
+      </ng-container>
+
+      <!-- ================= CONTENT TYPES (MODULE LEVEL) ================= -->
+      <div class="rounded-3xl border border-white/10 bg-white/5 p-4 space-y-2">
         <div class="text-xs text-neutral-400">Content types</div>
 
-        <div class="mt-2 space-y-2">
-          <label
-            *ngFor="let opt of contentOptions"
-            class="flex items-start gap-3 p-2 rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 hover:bg-opacity-10 transition"
-          >
-            <input
-              type="checkbox"
-              class="mt-1 accent-cyan-300"
-              [checked]="hasContentType(opt.value)"
-              (change)="
-                toggleContentType(opt.value, $any($event.target).checked)
-              "
-            />
-            <div>
-              <div class="text-xs font-medium">{{ opt.label }}</div>
-              <div *ngIf="opt.hint" class="text-[11px] text-neutral-500">
-                {{ opt.hint }}
-              </div>
-            </div>
-          </label>
-        </div>
-      </div>
-
-      <!-- Field -->
-      <div
-        *ngIf="selectedField() as f; else noField"
-        class="rounded-3xl border border-white/10 bg-white/5 p-4 space-y-4"
-      >
-        <div class="flex items-center justify-between">
-          <div>
-            <div class="text-xs text-neutral-400">Field</div>
-            <div class="text-sm font-semibold">{{ f.label }}</div>
-          </div>
-
-          <span
-            class="text-[10px] px-2 py-1 rounded-full border border-white/10 bg-white/5 text-neutral-300"
-          >
-            {{ f.type }}
-          </span>
-        </div>
-
-        <!-- Type selector -->
-        <div class="grid grid-cols-12 gap-3">
-          <div class="col-span-12">
-            <div class="text-xs text-neutral-400">Type</div>
-          </div>
-
-          <div class="col-span-12">
-            <ui-select
-              [ngModel]="f.type"
-              (ngModelChange)="onChangeFieldType(f.id, f.type, $event)"
-              [options]="fieldTypeOptions"
-            ></ui-select>
-
-            <div class="mt-2 text-[11px] text-neutral-500">
-              Cambiar el tipo puede descartar el default actual (MVP).
-            </div>
-          </div>
-        </div>
-
-        <!-- Label -->
-        <div>
-          <label class="block text-xs text-neutral-300">Label</label>
-          <input
-            class="w-full px-3 py-2 rounded-2xl bg-neutral-950/40 border border-white/10 outline-none focus:ring-2 focus:ring-cyan-300/40"
-            [ngModel]="f.label"
-            (ngModelChange)="s.updateField(f.id, { label: $event })"
-          />
-        </div>
-
-        <!-- Name (sanitized) -->
-        <div>
-          <label class="block text-xs text-neutral-300">Name</label>
-          <input
-            class="w-full px-3 py-2 rounded-2xl bg-neutral-950/40 border border-white/10 outline-none focus:ring-2 focus:ring-cyan-300/40 font-mono"
-            [ngModel]="f.name"
-            (ngModelChange)="onFieldNameInput(f.id, $event)"
-          />
-          <div class="mt-2 text-[11px] text-neutral-500">
-            Se usa en HubL como
-            <span class="font-mono">module.&lt;name&gt;</span>. Recomendación:
-            lower_snake_case.
-          </div>
-        </div>
-
-        <!-- Required -->
-        <label class="flex items-center gap-2 text-sm text-neutral-200">
+        <label
+          *ngFor="let opt of contentOptions"
+          class="flex items-start gap-3 p-2 rounded-2xl border border-white border-opacity-10 bg-white bg-opacity-5 hover:bg-opacity-10 transition"
+        >
           <input
             type="checkbox"
-            class="accent-cyan-300"
-            [checked]="!!f.required"
-            (change)="
-              s.updateField(f.id, { required: $any($event.target).checked })
-            "
+            class="mt-1 accent-cyan-300"
+            [checked]="hasContentType(opt.value)"
+            (change)="toggleContentType(opt.value, $any($event.target).checked)"
           />
-          Required
+          <div>
+            <div class="text-xs font-medium">{{ opt.label }}</div>
+            <div *ngIf="opt.hint" class="text-[11px] text-neutral-500">
+              {{ opt.hint }}
+            </div>
+          </div>
         </label>
+      </div>
 
-        <!-- Defaults by type -->
+      <!-- ================= FIELD MODE ================= -->
+      <ng-container *ngIf="selectedField() as f; else noField">
         <div
-          class="rounded-2xl border border-white/10 bg-neutral-950/20 p-3 space-y-2"
+          class="rounded-3xl border border-white/10 bg-white/5 p-4 space-y-4"
         >
-          <div class="text-xs text-neutral-400">Defaults</div>
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs text-neutral-400">Field</div>
+              <div class="text-sm font-semibold">{{ f.label }}</div>
+            </div>
 
-          <!-- TEXT -->
-          <ng-container *ngIf="f.type === 'text'">
-            <label class="block text-xs text-neutral-300">Default text</label>
+            <span
+              class="text-[10px] px-2 py-1 rounded-full border border-white/10 bg-white/5 text-neutral-300"
+            >
+              {{ f.type }}
+            </span>
+          </div>
+
+          <!-- ===== FIELD TYPE (CORRECTO) ===== -->
+          <div>
+            <div class="text-xs text-neutral-400">Type</div>
+            <ui-select
+              [options]="fieldTypeOptions"
+              [ngModel]="f.type"
+              (ngModelChange)="onChangeFieldType(f.id, $event)"
+            />
+          </div>
+
+          <!-- ===== LABEL ===== -->
+          <div>
+            <label class="block text-xs text-neutral-300">Label</label>
             <input
               class="w-full px-3 py-2 rounded-2xl bg-neutral-950/40 border border-white/10 outline-none focus:ring-2 focus:ring-cyan-300/40"
-              [ngModel]="f.defaultValue ?? ''"
-              (ngModelChange)="s.updateField(f.id, { defaultValue: $event })"
+              [ngModel]="f.label"
+              (ngModelChange)="s.updateField(f.id, { label: $event })"
             />
-          </ng-container>
+          </div>
 
-          <!-- BOOLEAN -->
-          <ng-container *ngIf="f.type === 'boolean'">
-            <label class="block text-xs text-neutral-300">Default</label>
-            <label class="flex items-center gap-2 text-sm text-neutral-200">
-              <input
-                type="checkbox"
-                class="accent-cyan-300"
-                [checked]="!!f.defaultValue"
-                (change)="
-                  s.updateField(f.id, {
-                    defaultValue: $any($event.target).checked
-                  })
-                "
-              />
-              true
-            </label>
-          </ng-container>
-
-          <!-- IMAGE -->
-          <ng-container *ngIf="f.type === 'image'">
-            <div class="text-[11px] text-neutral-500">
-              MVP: image aún no tiene default. Luego podemos soportar
-              src/alt/size.
+          <!-- ===== NAME ===== -->
+          <div>
+            <label class="block text-xs text-neutral-300">Name</label>
+            <input
+              class="w-full px-3 py-2 rounded-2xl bg-neutral-950/40 border border-white/10 outline-none focus:ring-2 focus:ring-cyan-300/40 font-mono"
+              [ngModel]="f.name"
+              (ngModelChange)="onFieldNameInput(f.id, $event)"
+            />
+            <div class="mt-2 text-[11px] text-neutral-500">
+              Se usa en HubL como
+              <span class="font-mono">module.&lt;name&gt;</span>. Recomendación:
+              lower_snake_case.
             </div>
-          </ng-container>
-        </div>
+          </div>
 
-        <!-- Optional: remove field -->
-        <button
-          class="w-full mt-2 px-3 py-2 rounded-2xl border border-white/10 bg-white/5 text-sm hover:bg-white/10 transition"
-          (click)="s.removeField(f.id)"
-        >
-          Remove field
-        </button>
-      </div>
+          <!-- ===== REQUIRED ===== -->
+          <label class="flex items-center gap-2 text-sm text-neutral-200">
+            <input
+              type="checkbox"
+              class="accent-cyan-300"
+              [checked]="!!f.required"
+              (change)="
+                s.updateField(f.id, { required: $any($event.target).checked })
+              "
+            />
+            Required
+          </label>
+
+          <!-- ===== DEFAULTS ===== -->
+          <div
+            class="rounded-2xl border border-white/10 bg-neutral-950/20 p-3 space-y-2"
+          >
+            <div class="text-xs text-neutral-400">Defaults</div>
+
+            <!-- TEXT -->
+            <ng-container *ngIf="f.type === 'text'">
+              <label class="block text-xs text-neutral-300">Default text</label>
+              <input
+                class="w-full px-3 py-2 rounded-2xl bg-neutral-950/40 border border-white/10 outline-none focus:ring-2 focus:ring-cyan-300/40"
+                [ngModel]="f.defaultValue ?? ''"
+                (ngModelChange)="s.updateField(f.id, { defaultValue: $event })"
+              />
+            </ng-container>
+
+            <!-- BOOLEAN -->
+            <ng-container *ngIf="f.type === 'boolean'">
+              <label class="block text-xs text-neutral-300">Default</label>
+              <label class="flex items-center gap-2 text-sm text-neutral-200">
+                <input
+                  type="checkbox"
+                  class="accent-cyan-300"
+                  [checked]="!!f.defaultValue"
+                  (change)="
+                    s.updateField(f.id, {
+                      defaultValue: $any($event.target).checked
+                    })
+                  "
+                />
+                true
+              </label>
+            </ng-container>
+
+            <!-- IMAGE -->
+            <ng-container *ngIf="f.type === 'image'">
+              <div class="text-[11px] text-neutral-500">
+                MVP: image aún no tiene default.
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- ===== REMOVE FIELD ===== -->
+          <button
+            class="w-full mt-2 px-3 py-2 rounded-2xl border border-white/10 bg-white/5 text-sm hover:bg-white/10 transition"
+            (click)="s.removeField(f.id)"
+          >
+            Remove field
+          </button>
+        </div>
+      </ng-container>
 
       <ng-template #noField>
         <div class="text-xs text-neutral-500">
@@ -200,14 +207,15 @@ import { UiSelectComponent } from '../../ui/ui-select/ui-select.component';
 })
 export class InspectorComponent {
   fieldTypeOptions = FIELD_TYPE_OPTIONS;
-
-  constructor(public s: EditorStateService) {}
+  selectedNode = computed(() => this.s.selectedNode());
 
   selectedField = computed(() => {
-    const id = this.s.selectedFieldId();
-    if (!id) return null;
-    return this.s.spec().fields.find((f) => f.id === id) ?? null;
+    const fieldId = this.s.selectedFieldId();
+    if (!fieldId) return null;
+    return this.s.spec().fields.find((f) => f.id === fieldId) ?? null;
   });
+
+  constructor(public s: EditorStateService) {}
 
   contentOptions: {
     value: HubSpotContentType;
@@ -247,12 +255,38 @@ export class InspectorComponent {
     this.s.updateField(fieldId, { name: sanitized });
   }
 
-  onChangeFieldType(fieldId: string, current: string, next: string) {
-    if (current === next) return;
+  onChangeFieldType(fieldId: string, next: string) {
+    const field = this.s.spec().fields.find((f) => f.id === fieldId);
+    if (!field) return;
 
-    // MVP: cambio destructivo (si quieres confirmación)
-    // if (!confirm("Cambiar el tipo puede descartar el default actual. ¿Continuar?")) return;
+    if (field.type === next) return;
 
-    this.s.replaceFieldType(fieldId, next as any);
+    // Reset de defaults según tipo (MVP)
+    const basePatch: any = { type: next };
+
+    if (next === 'text') {
+      basePatch.defaultValue = '';
+    }
+
+    if (next === 'boolean') {
+      basePatch.defaultValue = false;
+    }
+
+    if (next === 'image') {
+      delete basePatch.defaultValue;
+    }
+
+    this.s.updateField(fieldId, basePatch);
+  }
+
+  slotFieldOptions = computed(() =>
+    this.s
+      .spec()
+      .fields.map((f) => ({ value: f.id, label: `${f.label} (${f.name})` }))
+  );
+
+  onBindSlot(slotId: string, fieldId: string | null) {
+    if (!fieldId) return;
+    this.s.updateSlotBinding(slotId, fieldId);
   }
 }

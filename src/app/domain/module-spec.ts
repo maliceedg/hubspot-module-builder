@@ -1,8 +1,9 @@
-export type FieldType = 'text' | 'image' | 'boolean';
+// domain/module-spec.ts
+export type FieldType = 'text' | 'boolean' | 'image';
 
 export interface FieldSpecBase {
   id: string;
-  name: string; // HubSpot "name"
+  name: string; // HubSpot "name" (identifier used in HubL: module.<name>)
   label: string;
   required?: boolean;
 }
@@ -13,37 +14,38 @@ export interface TextFieldSpec extends FieldSpecBase {
   maxLength?: number;
 }
 
-export interface ImageFieldSpec extends FieldSpecBase {
-  type: 'image';
-  defaultAlt?: string;
-}
-
 export interface BooleanFieldSpec extends FieldSpecBase {
   type: 'boolean';
   defaultValue?: boolean;
 }
 
-export type FieldSpec = TextFieldSpec | ImageFieldSpec | BooleanFieldSpec;
+export interface ImageFieldSpec extends FieldSpecBase {
+  type: 'image';
+  // MVP: mantén simple. Luego puedes modelar src/alt/size, etc.
+  defaultValue?: string;
+}
 
-export type LayoutKind = 'section' | 'stack' | 'slot';
+export type FieldSpec = TextFieldSpec | BooleanFieldSpec | ImageFieldSpec;
 
-export interface LayoutNodeBase {
+// -----------------------
+// Layout
+// -----------------------
+export interface BaseLayoutNode {
   id: string;
-  kind: LayoutKind;
   title?: string;
 }
 
-export interface SectionNode extends LayoutNodeBase {
+export interface SectionNode extends BaseLayoutNode {
   kind: 'section';
-  children?: LayoutNode[];
+  children: LayoutNode[];
 }
 
-export interface StackNode extends LayoutNodeBase {
+export interface StackNode extends BaseLayoutNode {
   kind: 'stack';
-  children?: LayoutNode[];
+  children: LayoutNode[];
 }
 
-export interface SlotNode extends LayoutNodeBase {
+export interface SlotNode extends BaseLayoutNode {
   kind: 'slot';
   /** Binding estable: no se rompe al renombrar fields */
   bindFieldId?: string;
@@ -51,6 +53,9 @@ export interface SlotNode extends LayoutNodeBase {
 
 export type LayoutNode = SectionNode | StackNode | SlotNode;
 
+// -----------------------
+// HubSpot meta
+// -----------------------
 export type HubSpotContentType =
   | 'SITE_PAGE'
   | 'LANDING_PAGE'

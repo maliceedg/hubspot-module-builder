@@ -1,40 +1,8 @@
-import type { FieldSpec, ModuleSpec } from './module-spec';
-
-export type LayoutNode = SectionNode | StackNode | SlotNode;
-
-interface BaseLayoutNode {
-  id: string;
-  title?: string;
-}
-
-export interface SectionNode extends BaseLayoutNode {
-  kind: 'section';
-  children: LayoutNode[];
-}
-
-export interface StackNode extends BaseLayoutNode {
-  kind: 'stack';
-  children: LayoutNode[];
-}
-
-export interface SlotNode extends BaseLayoutNode {
-  kind: 'slot';
-  bindFieldName: string;
-  title?: string;
-}
+import type { ModuleSpec, LayoutNode } from './module-spec';
 
 const uid = () =>
   globalThis.crypto?.randomUUID?.() ??
   `id_${Math.random().toString(16).slice(2)}`;
-
-const defaultField = (): FieldSpec => ({
-  id: uid(),
-  type: 'text',
-  name: 'headline',
-  label: 'Headline',
-  required: false,
-  defaultValue: '',
-});
 
 export function createDefaultModuleSpec(): ModuleSpec {
   return {
@@ -57,12 +25,8 @@ export function createDefaultModuleSpec(): ModuleSpec {
           children: [],
         },
       ],
-    },
+    } satisfies LayoutNode,
   };
 }
 
-/**
- * Alias por si ya lo estabas usando en algún lado.
- * Si no lo usas, elimínalo y quédate solo con createDefaultModuleSpec().
- */
 export const createInitialSpec = createDefaultModuleSpec;

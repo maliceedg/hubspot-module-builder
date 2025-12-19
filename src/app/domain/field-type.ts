@@ -1,4 +1,4 @@
-export type FieldType = 'text' | 'boolean' | 'image';
+export type { FieldType } from './module-spec';
 
 export const FIELD_TYPE_OPTIONS = [
   { value: 'text', label: 'Text' },

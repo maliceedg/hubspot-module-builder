@@ -1,15 +1,11 @@
 import { Injectable, computed, effect, signal } from '@angular/core';
-import type { LayoutNode } from '../domain/module-spec';
-
+import type { LayoutNode, SlotNode, StackNode } from '../domain/module-spec';
 import type {
   ModuleSpec,
   FieldSpec,
   HubSpotContentType,
 } from '../domain/module-spec';
-import {
-  createDefaultModuleSpec,
-  SlotNode,
-} from '../domain/module-spec-factory';
+import { createDefaultModuleSpec } from '../domain/module-spec-factory';
 import {
   validateModuleSpec,
   type ValidationIssue,
@@ -188,12 +184,36 @@ export class EditorStateService {
         ? { ...base, type: 'boolean' as const, defaultValue: false }
         : { ...base, type: 'image' as const };
 
-    this.spec.update((prev) => ({
+    // --- AUTO-SLOT (MVP) ---
+    const prev = this.spec();
+    const nextLayout = structuredClone(prev.layout);
+
+    const stack = this.findFirstStack(nextLayout);
+    if (!stack) {
+      // No debería pasar con tu factory actual, pero evitamos estado corrupto
+      throw new Error('No stack found to insert slot');
+    }
+
+    const newSlot: SlotNode = {
+      id: crypto.randomUUID(),
+      kind: 'slot',
+      title: newField.label,
+      bindFieldId: newField.id,
+    };
+
+    // Asegura children array
+    stack.children = [...(stack.children ?? []), newSlot];
+
+    // Una sola actualización (fields + layout) para evitar estados intermedios
+    this.spec.set({
       ...prev,
       fields: [...prev.fields, newField],
-    }));
+      layout: nextLayout,
+    });
 
+    // Selecciones coherentes
     this.selectedFieldId.set(newField.id);
+    this._selectedNodeId.set(newSlot.id);
   }
 
   updateField(fieldId: string, patch: Partial<FieldSpec>) {
@@ -240,14 +260,19 @@ export class EditorStateService {
   }
 
   updateSlotBinding(slotId: string, fieldId: string) {
-    const spec = structuredClone(this.spec());
-    const node = this.findNodeById(spec.layout, slotId);
+    const spec = this.spec();
 
-    if (!node || node.kind !== 'slot') return;
+    const nextSpec: ModuleSpec = {
+      ...spec,
+      layout: structuredClone(spec.layout),
+    };
 
-    node.bindFieldId = fieldId;
+    const node = this.findNodeById(nextSpec.layout, slotId);
+    if (node?.kind === 'slot') {
+      node.bindFieldId = fieldId;
+    }
 
-    this.spec.set(spec);
+    this.spec.set(nextSpec);
   }
 
   private uid() {
@@ -332,7 +357,7 @@ export class EditorStateService {
       kind: 'slot',
       id: crypto.randomUUID(),
       title: 'slot',
-      bindFieldName: '',
+      bindFieldId: undefined,
     };
 
     parent.children.push(slot);
@@ -377,6 +402,17 @@ export class EditorStateService {
     this.selectedFieldId.set(newField.id);
 
     return newField.id;
+  }
+
+  private findFirstStack(root: LayoutNode): StackNode | null {
+    if (root.kind === 'stack') return root;
+    if (root.kind === 'slot') return null;
+
+    for (const c of root.children ?? []) {
+      const found = this.findFirstStack(c);
+      if (found) return found;
+    }
+    return null;
   }
 
   private capitalize(s: string) {
