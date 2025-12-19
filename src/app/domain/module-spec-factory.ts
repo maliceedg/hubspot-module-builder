@@ -47,11 +47,12 @@ export function createDefaultModuleSpec(): ModuleSpec {
     fields: [],
     layout: {
       kind: 'section',
-      id: 'root',
+      id: uid(),
+      title: 'root',
       children: [
         {
           kind: 'stack',
-          id: 'content',
+          id: uid(),
           title: 'content',
           children: [],
         },

@@ -6,7 +6,10 @@ import type {
   FieldSpec,
   HubSpotContentType,
 } from '../domain/module-spec';
-import { createDefaultModuleSpec } from '../domain/module-spec-factory';
+import {
+  createDefaultModuleSpec,
+  SlotNode,
+} from '../domain/module-spec-factory';
 import {
   validateModuleSpec,
   type ValidationIssue,
@@ -27,7 +30,8 @@ export class EditorStateService {
   // -----------------------
   readonly spec = signal<ModuleSpec>(createDefaultModuleSpec());
   readonly selectedFieldId = signal<string | null>(null);
-  readonly selectedNodeId = signal<string | null>(null);
+  private readonly _selectedNodeId = signal<string | null>(null);
+  selectedNodeId = this._selectedNodeId.asReadonly();
 
   // Publish settings (no hardcode en el componente)
   readonly publishTarget = signal<PublishTarget>(this.loadPublishTarget());
@@ -55,8 +59,8 @@ export class EditorStateService {
     return null;
   }
 
-  selectNode(id: string | null) {
-    this.selectedNodeId.set(id);
+  selectNode(id: string) {
+    this._selectedNodeId.set(id);
   }
 
   readonly selectedNode = computed<LayoutNode | null>(() => {
@@ -235,16 +239,15 @@ export class EditorStateService {
     }
   }
 
-  updateSlotBinding(slotId: string, bindFieldName: string) {
-    const spec = this.spec();
+  updateSlotBinding(slotId: string, fieldId: string) {
+    const spec = structuredClone(this.spec());
+    const node = this.findNodeById(spec.layout, slotId);
 
-    const nextLayout = this.mapLayout(spec.layout, (n) => {
-      if (n.kind !== 'slot') return n;
-      if (n.id !== slotId) return n;
-      return { ...n, bindFieldName };
-    });
+    if (!node || node.kind !== 'slot') return;
 
-    this.spec.set({ ...spec, layout: nextLayout });
+    node.bindFieldId = fieldId;
+
+    this.spec.set(spec);
   }
 
   private uid() {
@@ -315,23 +318,27 @@ export class EditorStateService {
   }
 
   addSlotToSelected() {
-    const targetId = this.selectedNodeId();
-    if (!targetId) return;
+    const selectedId = this.selectedNodeId();
+    if (!selectedId) return;
 
-    const bindFieldName = this.ensureAtLeastOneField();
+    const spec = structuredClone(this.spec());
 
-    const slot: LayoutNode = {
+    const parent = this.findNodeById(spec.layout, selectedId);
+    if (!parent || parent.kind === 'slot') return;
+
+    if (!parent.children) parent.children = [];
+
+    const slot: SlotNode = {
       kind: 'slot',
-      id: this.uid(),
+      id: crypto.randomUUID(),
       title: 'slot',
-      bindFieldName,
+      bindFieldName: '',
     };
 
-    const spec = this.spec();
-    const nextLayout = this.insertChild(spec.layout, targetId, slot);
+    parent.children.push(slot);
 
-    this.spec.set({ ...spec, layout: nextLayout });
-    this.selectedNodeId.set(slot.id);
+    this.spec.set(spec);
+    this._selectedNodeId.set(slot.id);
   }
 
   addStackToSelected() {
@@ -349,7 +356,27 @@ export class EditorStateService {
     const nextLayout = this.insertChild(spec.layout, targetId, stack);
 
     this.spec.set({ ...spec, layout: nextLayout });
-    this.selectedNodeId.set(stack.id);
+    this._selectedNodeId.set(stack.id);
+  }
+
+  private ensureAtLeastOneFieldId(): string {
+    const spec = this.spec();
+    if (spec.fields.length > 0) return spec.fields[0].id;
+
+    const name = this.uniqueFieldName('text');
+    const newField: FieldSpec = {
+      id: this.uid(),
+      type: 'text',
+      name,
+      label: 'Text',
+      required: false,
+      defaultValue: '',
+    };
+
+    this.spec.set({ ...spec, fields: [...spec.fields, newField] });
+    this.selectedFieldId.set(newField.id);
+
+    return newField.id;
   }
 
   private capitalize(s: string) {

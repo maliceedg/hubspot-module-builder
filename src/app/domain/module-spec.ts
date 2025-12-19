@@ -1,56 +1,56 @@
-// ---- Fields ----
-export type FieldType = 'text' | 'boolean' | 'image';
+export type FieldType = 'text' | 'image' | 'boolean';
 
-export type FieldSpec =
-  | {
-      id: string;
-      type: 'text';
-      name: string;
-      label: string;
-      required?: boolean;
-      defaultValue?: string;
-    }
-  | {
-      id: string;
-      type: 'boolean';
-      name: string;
-      label: string;
-      required?: boolean;
-      defaultValue?: boolean;
-    }
-  | {
-      id: string;
-      type: 'image';
-      name: string;
-      label: string;
-      required?: boolean;
-    };
-
-// ---- Layout ----
-interface BaseLayoutNode {
+export interface FieldSpecBase {
   id: string;
-  title?: string; // <- agrega title aquí
+  name: string; // HubSpot "name"
+  label: string;
+  required?: boolean;
 }
 
-export type LayoutNode = SectionNode | StackNode | SlotNode;
+export interface TextFieldSpec extends FieldSpecBase {
+  type: 'text';
+  defaultValue?: string;
+  maxLength?: number;
+}
 
-export interface SectionNode extends BaseLayoutNode {
+export interface ImageFieldSpec extends FieldSpecBase {
+  type: 'image';
+  defaultAlt?: string;
+}
+
+export interface BooleanFieldSpec extends FieldSpecBase {
+  type: 'boolean';
+  defaultValue?: boolean;
+}
+
+export type FieldSpec = TextFieldSpec | ImageFieldSpec | BooleanFieldSpec;
+
+export type LayoutKind = 'section' | 'stack' | 'slot';
+
+export interface LayoutNodeBase {
+  id: string;
+  kind: LayoutKind;
+  title?: string;
+}
+
+export interface SectionNode extends LayoutNodeBase {
   kind: 'section';
   children?: LayoutNode[];
 }
 
-export interface StackNode extends BaseLayoutNode {
+export interface StackNode extends LayoutNodeBase {
   kind: 'stack';
   children?: LayoutNode[];
 }
 
-export interface SlotNode extends BaseLayoutNode {
+export interface SlotNode extends LayoutNodeBase {
   kind: 'slot';
-  bindFieldName: string;
-  // sin children
+  /** Binding estable: no se rompe al renombrar fields */
+  bindFieldId?: string;
 }
 
-// ---- ModuleSpec ----
+export type LayoutNode = SectionNode | StackNode | SlotNode;
+
 export type HubSpotContentType =
   | 'SITE_PAGE'
   | 'LANDING_PAGE'
@@ -70,6 +70,3 @@ export interface ModuleSpec {
   fields: FieldSpec[];
   layout: LayoutNode;
 }
-
-type _Stack = Extract<LayoutNode, { kind: 'stack' }>;
-type _HasTitle = _Stack['title'];

@@ -32,24 +32,31 @@ import { LayoutNode } from '../../domain/module-spec';
 
     <ng-template #nodeTpl let-node="node">
       <div
-        class="rounded-2xl border border-white/10 bg-white/5 p-3 mb-3 hover:bg-white/10 transition"
+        class="node rounded-2xl border border-white/10 bg-white/5 p-3 mb-3
+           hover:bg-white/10 transition cursor-pointer"
         [class.border-cyan-300]="s.selectedNodeId() === node.id"
+        (click)="onSelect(node, $event)"
       >
-        <button class="text-left w-full" (click)="s.selectNode(node.id)">
+        <!-- Header del nodo -->
+        <div>
           <div class="text-[11px] text-neutral-400 uppercase tracking-wider">
             {{ node.kind }}
           </div>
-          <div class="text-sm font-semibold">{{ node.title || node.id }}</div>
-        </button>
+          <div class="text-sm font-semibold">
+            {{ node.title || node.id }}
+          </div>
+        </div>
 
+        <!-- Body -->
         <div class="mt-3">
           <ng-container [ngSwitch]="node.kind">
+            <!-- SLOT -->
             <div *ngSwitchCase="'slot'" class="text-sm">
               <div class="flex items-center gap-2 text-xs text-neutral-400">
                 <span>bind</span>
-                <span class="font-mono text-neutral-200">{{
-                  node.bindFieldName
-                }}</span>
+                <span class="font-mono text-neutral-200">
+                  {{ node.bindFieldName }}
+                </span>
               </div>
 
               <div
@@ -62,6 +69,7 @@ import { LayoutNode } from '../../domain/module-spec';
               </div>
             </div>
 
+            <!-- STACK / SECTION -->
             <div *ngSwitchDefault class="space-y-2">
               <ng-container *ngFor="let c of node.children ?? []">
                 <ng-container
@@ -93,5 +101,11 @@ export class CanvasComponent {
       default:
         return '';
     }
+  }
+
+  onSelect(node: LayoutNode, ev: MouseEvent) {
+    ev.stopPropagation();
+    console.log('SELECT', node.id);
+    this.s.selectNode(node.id);
   }
 }

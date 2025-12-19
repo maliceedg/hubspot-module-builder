@@ -47,6 +47,16 @@ import { FIELD_TYPE_OPTIONS, FieldType } from '../../domain/field-type';
         >
           Add
         </button>
+
+        <button
+          type="button"
+          *ngIf="s.selectedNodeId()"
+          (click)="s.addSlotToSelected()"
+          class="shrink-0 rounded-2xl border border-white/10 bg-white/5 px-3 py-2 text-sm text-neutral-100
+           hover:bg-white/10 transition"
+        >
+          Add slot
+        </button>
       </div>
 
       <div class="space-y-2">
